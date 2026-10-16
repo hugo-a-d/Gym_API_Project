@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fitness log</title>
+<style>
+  :root {
+    --bg: #eef2f4;
+    --surface: #ffffff;
+    --ink: #17252b;
+    --muted: #5d6f77;
+    --line: #cdd8dd;
+    --accent: #0d6b66;
+    --accent-ink: #ffffff;
+    --ok: #0d6b66;
+    --err: #b3261e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    line-height: 1.5;
+  }
+  main { max-width: 34rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  h1 { font-size: 1.75rem; margin: 0 0 1.25rem; letter-spacing: -0.01em; }
+
+  .tabs { display: flex; gap: .5rem; margin-bottom: 1rem; }
+  .tabs button {
+    flex: 1; padding: .6rem; font: inherit; font-weight: 600;
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 6px; cursor: pointer;
+  }
+  .tabs button[aria-selected="true"] {
+    background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+  }
+
+  form {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.25rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  form[hidden] { display: none; }
+  .full { grid-column: 1 / -1; }
+  label { display: block; font-size: .9rem; font-weight: 600; }
+  label small { font-weight: 400; color: var(--muted); }
+  input, textarea {
+    width: 100%; margin-top: .25rem; padding: .55rem .65rem;
+    font: inherit; color: var(--ink); background: #fff;
+    border: 1px solid var(--line); border-radius: 6px;
+  }
+  textarea { resize: vertical; min-height: 4.5rem; }
+  input:focus-visible, textarea:focus-visible, button:focus-visible {
+    outline: 3px solid #7cc4bf; outline-offset: 1px;
+  }
+  .submit {
+    grid-column: 1 / -1; padding: .75rem; font: inherit; font-weight: 700;
+    color: var(--accent-ink); background: var(--accent);
+    border: 0; border-radius: 6px; cursor: pointer;
+  }
+  .submit:disabled { opacity: .6; cursor: wait; }
+
+  #status { min-height: 1.5rem; margin-top: 1rem; font-weight: 600; }
+  #status.ok { color: var(--ok); }
+  #status.error { color: var(--err); }
+
+  @media (max-width: 30rem) { form { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Fitness log</h1>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-target="cardio-form">Cardio</button>
+    <button role="tab" aria-selected="false" data-target="weight-form">Weight</button>
+  </div>
+
+  <form id="cardio-form" data-endpoint="/cardio">
+    <label class="full">Date <small>(dd/mm/yyyy)</small>
+      <input name="date" required inputmode="numeric" placeholder="16/10/2026"
+             pattern="\d{2}/\d{2}/\d{4}">
+    </label>
+    <label>Duration <small>(min)</small>
+      <input name="duration_min" type="number" step="any" min="0">
+    </label>
+    <label>Distance <small>(m)</small>
+      <input name="distance_km" type="number" step="any" min="0">
+    </label>
+    <label>Average 500m <small>(time)</small>
+      <input name="avg_hr" type="number" step="1" min="0">
+    </label>
+    <button class="submit" type="submit">Save cardio session</button>
+  </form>
+
+  <form id="weight-form" data-endpoint="/weight" hidden>
+    <label class="full">Date <small>(dd/mm/yyyy)</small>
+      <input name="date" required inputmode="numeric" placeholder="16/10/2026"
+             pattern="\d{2}/\d{2}/\d{4}">
+    </label>
+    <label class="full">Weight <small>(kg)</small>
+      <input name="weight_kg" type="number" step="any" min="0" required>
+    </label>
+    <label>Body fat <small>(%)</small>
+      <input name="body_fat_pct" type="number" step="any" min="0">
+    </label>
+    <label>Muscle mass <small>(kg)</small>
+      <input name="muscle_mass_kg" type="number" step="any" min="0">
+    </label>
+    <button class="submit" type="submit">Save weight entry</button>
+  </form>
+
+  <div id="status" role="status" aria-live="polite"></div>
+</main>
+
+<script>
+  const status = document.getElementById("status");
+  const forms = document.querySelectorAll("form");
+
+  // Fill today's date (dd/mm/yyyy) in every form
+  const now = new Date();
+  const today = [
+    String(now.getDate()).padStart(2, "0"),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    now.getFullYear()
+  ].join("/");
+  forms.forEach(f => f.elements.date.value = today);
+
+  // Tab switching
+  document.querySelectorAll(".tabs button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tabs button")
+        .forEach(b => b.setAttribute("aria-selected", b === btn));
+      forms.forEach(f => f.hidden = f.id !== btn.dataset.target);
+      status.textContent = "";
+      status.className = "";
+    });
+  });
+
+  // Build JSON from a form: skip empty fields so optional values stay null
+  function formToJson(form) {
+    const body = {};
+    for (const el of form.elements) {
+      if (!el.name || el.value.trim() === "") continue;
+      body[el.name] = el.type === "number" ? Number(el.value) : el.value.trim();
+    }
+    return body;
+  }
+
+  forms.forEach(form => {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const button = form.querySelector(".submit");
+      button.disabled = true;
+      status.className = "";
+      status.textContent = "Saving…";
+
+      try {
+        const res = await fetch(form.dataset.endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formToJson(form))
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          const detail = Array.isArray(err.detail)
+            ? err.detail.map(d => `${d.loc.slice(1).join(".")}: ${d.msg}`).join("; ")
+            : (err.detail || res.statusText);
+          throw new Error(detail);
+        }
+
+        const data = await res.json();
+        status.className = "ok";
+        status.textContent = `Saved (entry #${data.id}).`;
+        form.reset();
+        form.elements.date.value = today;
+      } catch (err) {
+        status.className = "error";
+        status.textContent = `Could not save: ${err.message}`;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+</script>
+</body>
+</html>
