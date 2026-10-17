@@ -1,7 +1,6 @@
 import sqlite3
 import os
 
-DB_PATH = os.environ["DB_PATH"]
 
 def get_conn():
     con = sqlite3.connect(os.environ["DB_PATH"])
@@ -13,19 +12,18 @@ def init_db():
     with get_conn() as con:
         con.execute("PRAGMA journal_mode=WAL")
         con.executescript("""
-            CREATE TABLE IF NOT EXISTS rower_cardio (
+            CREATE TABLE IF NOT EXISTS RowerCardio (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date TEXT NOT NULL,
+                duration_min REAL,
                 distance_m REAL,
-                avg_500_m INTEGER,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                avg_500m REAL
             );
-            CREATE TABLE IF NOT EXISTS weight (
+            CREATE TABLE IF NOT EXISTS ScaleWeight (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date TEXT NOT NULL,
                 weight_kg REAL NOT NULL,
                 body_fat REAL,
-                muscle_mass REAL,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                muscle_mass REAL
             );
         """)

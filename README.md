@@ -6,7 +6,5 @@ Currently I have scale data and cardio data.
 THe plan is run this as a docker container on a server via proxmox and secure the endpoint with tailnet so only my phone can send data to it.
 
 TO DO:
-once data is added we refresh the screen, maybe go back to the home page
 containerise it 
-deploy it via proxmox 
-
+make it look pretty

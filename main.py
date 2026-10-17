@@ -1,25 +1,16 @@
-from datetime import date as Date
-from typing import Optional
+import re
+from datetime import date as Date, datetime
+from typing import Annotated, Optional
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, BeforeValidator, ConfigDict
 from db import get_conn, init_db
+from utils import ScaleWeight, RowerCardio
 
 
 app = FastAPI()
 
-class rower_cardio(BaseModel):
-    date : Date
-    distance_m : Optional[float] = None
-    avg_500m : Optional[float] = None
-
-
-class scale_weight(BaseModel):
-    date : Date
-    weight_kg : Optional[float] = None
-    body_fat : Optional[float] = None
-    muscle_mass: Optional[float] = None
     
 @app.on_event("startup") # look up Lifespan events as this old
 def startup():
@@ -30,26 +21,24 @@ def home():
     return FileResponse("static/index.html")
 
 
-@app.post("/cardio")
-def add_cardio(entry: rower_cardio):
+@app.post("/rower", status_code=201)
+def add_cardio(entry: RowerCardio):
     with get_conn() as con:
         cur = con.execute(
-            """INSERT INTO cardio
-               (date, activity, duration_min, distance_km, avg_hr, max_hr, calories, notes)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (entry.date.isoformat(), entry.activity, entry.duration_min,
-             entry.distance_km, entry.avg_hr, entry.max_hr,
-             entry.calories, entry.notes),
+            """INSERT INTO RowerCardio
+               (date, duration_min, distance_m, avg_500m)
+               VALUES (?, ?, ?, ?)""",
+            (entry.date.isoformat(), entry.duration_min,
+             entry.distance_m, entry.avg_500m,),
         )
     return {"id": cur.lastrowid}
 
 @app.post("/weight", status_code=201)
-def add_weight(entry: scale_weight):
+def add_weight(entry: ScaleWeight):
     with get_conn() as con:
         cur = con.execute(
-            """INSERT INTO weight (date, weight_kg, body_fat, muscle_mass_kg,
-                                   water_pct, bmi, notes)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO ScaleWeight (date, weight_kg, body_fat, muscle_mass)
+               VALUES (?, ?, ?, ?)""",
             (entry.date.isoformat(), entry.weight_kg, entry.body_fat,
              entry.muscle_mass),
         )

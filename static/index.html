@@ -78,40 +78,39 @@
   <h1>Fitness log</h1>
 
   <div class="tabs" role="tablist">
-    <button role="tab" aria-selected="true" data-target="cardio-form">Cardio</button>
+    <button role="tab" aria-selected="true" data-target="rower-form">Rower</button>
     <button role="tab" aria-selected="false" data-target="weight-form">Weight</button>
   </div>
 
-  <form id="cardio-form" data-endpoint="/cardio">
-    <label class="full">Date <small>(dd/mm/yyyy)</small>
-      <input name="date" required inputmode="numeric" placeholder="16/10/2026"
-             pattern="\d{2}/\d{2}/\d{4}">
+  <form id="rower-form" data-endpoint="/rower">
+    <label class="full">Date
+      <input name="date" type="date" required>
     </label>
     <label>Duration <small>(min)</small>
       <input name="duration_min" type="number" step="any" min="0">
     </label>
     <label>Distance <small>(m)</small>
-      <input name="distance_km" type="number" step="any" min="0">
+      <input name="distance_m" type="number" step="any" min="0">
     </label>
-    <label>Average 500m <small>(time)</small>
-      <input name="avg_hr" type="number" step="1" min="0">
-    </label>
+    <label>Average 500m <small>(m:ss)</small>
+  <input name="avg_500m" inputmode="numeric" placeholder="2:05"
+         pattern="\d{1,2}:[0-5]\d(\.\d)?">
+  </label>
     <button class="submit" type="submit">Save cardio session</button>
   </form>
 
   <form id="weight-form" data-endpoint="/weight" hidden>
-    <label class="full">Date <small>(dd/mm/yyyy)</small>
-      <input name="date" required inputmode="numeric" placeholder="16/10/2026"
-             pattern="\d{2}/\d{2}/\d{4}">
+    <label class="full">Date 
+      <input name="date" type="date" required>
     </label>
     <label class="full">Weight <small>(kg)</small>
       <input name="weight_kg" type="number" step="any" min="0" required>
     </label>
     <label>Body fat <small>(%)</small>
-      <input name="body_fat_pct" type="number" step="any" min="0">
+      <input name="body_fat" type="number" step="any" min="0">
     </label>
     <label>Muscle mass <small>(kg)</small>
-      <input name="muscle_mass_kg" type="number" step="any" min="0">
+      <input name="muscle_mass" type="number" step="any" min="0">
     </label>
     <button class="submit" type="submit">Save weight entry</button>
   </form>
@@ -123,14 +122,12 @@
   const status = document.getElementById("status");
   const forms = document.querySelectorAll("form");
 
-  // Fill today's date (dd/mm/yyyy) in every form
+ // Fill today's date (yyyy-mm-dd, local time) in every form
   const now = new Date();
-  const today = [
-    String(now.getDate()).padStart(2, "0"),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    now.getFullYear()
-  ].join("/");
+  const today = new Date(now - now.getTimezoneOffset() * 60000)
+    .toISOString().slice(0, 10);
   forms.forEach(f => f.elements.date.value = today);
+
 
   // Tab switching
   document.querySelectorAll(".tabs button").forEach(btn => {
